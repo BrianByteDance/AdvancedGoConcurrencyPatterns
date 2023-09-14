@@ -8,6 +8,12 @@ type Fetcher interface {
 	Fetch() (items []Item, next time.Time, err error)
 }
 
+type fetchResult struct {
+	fetched []Item
+	next    time.Time
+	err     error
+}
+
 // fetches Items from domain
 func Fetch(domain string) Fetcher {
 	return nil

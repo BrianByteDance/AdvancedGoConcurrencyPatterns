@@ -38,13 +38,14 @@ func (s *sub) loop() {
 	var next time.Time               // initially January 1, year 0
 	var err error                    // set when Fetch fails
 	var seen = make(map[string]bool) // set of item.GUIDs
+	var fetchDone chan fetchResult   // if non-nil, Fetch is running
 	for {
 		var fetchDelay time.Duration // initially 0 (no delay)
 		if now := time.Now(); next.After(now) {
 			fetchDelay = next.Sub(now)
 		}
 		var startFetch <-chan time.Time
-		if len(pending) < maxPending {
+		if fetchDone == nil && len(pending) < maxPending {
 			startFetch = time.After(fetchDelay) // enable fetch case
 		}
 
@@ -61,13 +62,20 @@ func (s *sub) loop() {
 			close(s.updates) // tells receiver we're done
 			return
 		case <-startFetch:
-			var fetched []Item
-			fetched, next, err = s.fetcher.Fetch()
-			if err != nil {
+			fetchDone = make(chan fetchResult, 1)
+			go func() {
+				fetched, next, err := s.fetcher.Fetch()
+				fetchDone <- fetchResult{fetched, next, err}
+			}()
+		case result := <-fetchDone:
+			fetchDone = nil
+			// Use result.fetched, result.next, result.err
+			if result.err != nil {
 				next = time.Now().Add(10 * time.Second)
 				break
 			}
-			for _, item := range fetched {
+			next = result.next
+			for _, item := range result.fetched {
 				if !seen[item.GUID] {
 					pending = append(pending, item)
 					seen[item.GUID] = true
