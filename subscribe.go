@@ -42,6 +42,13 @@ func (s *sub) loop() {
 		}
 		startFetch := time.After(fetchDelay)
 
+		var first Item
+		var updates chan Item
+		if len(pending) > 0 {
+			first = pending[0]
+			updates = s.updates // enable send case
+		}
+
 		select {
 		case errc := <-s.closing:
 			errc <- err
@@ -55,7 +62,7 @@ func (s *sub) loop() {
 				break
 			}
 			pending = append(pending, fetched...)
-		case s.updates <- pending[0]:
+		case updates <- first:
 			pending = pending[1:]
 		}
 	}
