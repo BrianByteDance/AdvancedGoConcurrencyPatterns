@@ -1,5 +1,7 @@
 package AdvancedGoConcurrencyPatterns
 
+import "time"
+
 type Subscription interface {
 	Updates() <-chan Item // stream of Items
 	Close() error         // shuts down the stream
@@ -38,4 +40,36 @@ func (s *sub) Close() error {
 	// TODO: make loop exit
 	// TODO: find out about any error
 	return nil
+}
+
+type naiveSub struct {
+	sub
+	closed bool
+	err    error
+}
+
+func (s *naiveSub) loop() {
+	for {
+		if s.closed {
+			close(s.updates)
+			return
+		}
+		items, next, err := s.fetcher.Fetch()
+		if err != nil {
+			s.err = err
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		for _, item := range items {
+			s.updates <- item
+		}
+		if now := time.Now(); next.After(now) {
+			time.Sleep(next.Sub(now))
+		}
+	}
+}
+
+func (s *naiveSub) Close() error {
+	s.closed = true
+	return s.err
 }
