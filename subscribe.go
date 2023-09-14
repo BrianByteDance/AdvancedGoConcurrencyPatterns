@@ -55,6 +55,8 @@ func (s *sub) loop() {
 				break
 			}
 			pending = append(pending, fetched...)
+		case s.updates <- pending[0]:
+			pending = pending[1:]
 		}
 	}
 }
