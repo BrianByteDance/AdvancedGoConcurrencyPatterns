@@ -12,7 +12,7 @@ func main() {
 	go player("ping", table)
 	go player("pong", table)
 
-	table <- new(Ball) // game on; toss the ball
+	// table <- new(Ball) // game on; toss the ball
 	time.Sleep(1 * time.Second)
 	<-table // game over; grab the ball
 }
