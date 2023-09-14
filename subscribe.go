@@ -1,7 +1,5 @@
 package AdvancedGoConcurrencyPatterns
 
-import "fmt"
-
 type Subscription interface {
 	Updates() <-chan Item // stream of Items
 	Close() error         // shuts down the stream
@@ -32,19 +30,13 @@ type sub struct {
 // loop fetches items using s.fetcher and sends them
 // on s.updates.  loop exits when s.Close is called.
 func (s *sub) loop() {
-	//... declare mutable state ...
+	var err error // set when Fetch fails
 	for {
-		//... set up channels for cases ...
-		var c1, c2, c3 chan any
-		var x any
 		select {
-		case <-c1:
-			//... read/write state ...
-		case c2 <- x:
-			//... read/write state ...
-		case y := <-c3:
-			//... read/write state ...
-			fmt.Print(y)
+		case errc := <-s.closing:
+			errc <- err
+			close(s.updates) // tells receiver we're done
+			return
 		}
 	}
 }
@@ -53,7 +45,7 @@ func (s *sub) Updates() <-chan Item {
 }
 
 func (s *sub) Close() error {
-	// TODO: make loop exit
-	// TODO: find out about any error
-	return nil
+	errc := make(chan error)
+	s.closing <- errc
+	return <-errc
 }
