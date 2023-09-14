@@ -2,6 +2,8 @@ package AdvancedGoConcurrencyPatterns
 
 import "time"
 
+const maxPending = 10
+
 type Subscription interface {
 	Updates() <-chan Item // stream of Items
 	Close() error         // shuts down the stream
@@ -41,7 +43,10 @@ func (s *sub) loop() {
 		if now := time.Now(); next.After(now) {
 			fetchDelay = next.Sub(now)
 		}
-		startFetch := time.After(fetchDelay)
+		var startFetch <-chan time.Time
+		if len(pending) < maxPending {
+			startFetch = time.After(fetchDelay) // enable fetch case
+		}
 
 		var first Item
 		var updates chan Item
