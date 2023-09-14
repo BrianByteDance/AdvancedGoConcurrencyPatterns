@@ -32,9 +32,10 @@ type sub struct {
 // loop fetches items using s.fetcher and sends them
 // on s.updates.  loop exits when s.Close is called.
 func (s *sub) loop() {
-	var pending []Item // appended by fetch; consumed by send
-	var next time.Time // initially January 1, year 0
-	var err error      // set when Fetch fails
+	var pending []Item               // appended by fetch; consumed by send
+	var next time.Time               // initially January 1, year 0
+	var err error                    // set when Fetch fails
+	var seen = make(map[string]bool) // set of item.GUIDs
 	for {
 		var fetchDelay time.Duration // initially 0 (no delay)
 		if now := time.Now(); next.After(now) {
@@ -61,7 +62,12 @@ func (s *sub) loop() {
 				next = time.Now().Add(10 * time.Second)
 				break
 			}
-			pending = append(pending, fetched...)
+			for _, item := range fetched {
+				if !seen[item.GUID] {
+					pending = append(pending, item)
+					seen[item.GUID] = true
+				}
+			}
 		case updates <- first:
 			pending = pending[1:]
 		}
