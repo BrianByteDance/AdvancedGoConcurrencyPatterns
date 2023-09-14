@@ -26,6 +26,7 @@ func Merge(subs ...Subscription) Subscription {
 type sub struct {
 	fetcher Fetcher   // fetches items
 	updates chan Item // delivers items to the user
+	closing chan chan error
 }
 
 // loop fetches items using s.fetcher and sends them
